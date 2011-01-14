@@ -1365,11 +1365,11 @@ void CServer::ConKick(IConsole::IResult *pResult, void *pUser, int ClientId)
 	if(pResult->NumArguments() >= 1)
 	{
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "Kicked by (%s)", pResult->GetString(0));
+		str_format(aBuf, sizeof(aBuf), "Kicked (%s)", pResult->GetString(0)); // TODO: fix this (it doesnt show the reason string)
 		((CServer *)pUser)->Kick(Victim, aBuf);
 	}
 	else
-		((CServer *)pUser)->Kick(Victim, "Kicked by console");
+		((CServer *)pUser)->Kick(Victim, "Kicked with no reason specified");
 }
 
 void CServer::ConBan(IConsole::IResult *pResult, void *pUser, int ClientId1)
