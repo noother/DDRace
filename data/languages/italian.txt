@@ -187,8 +187,8 @@ Language
 Lht.
 == Lum.
 
-Loading DDRace Client
-== Caricamento DDRace
+Loading
+== Caricamento
 
 MOTD
 == MDG
@@ -459,12 +459,6 @@ Add Image
 Add Quad
 == 
 
-Add Quads Layer
-== 
-
-Add Tile Layer
-== 
-
 Add group
 == 
 
@@ -508,9 +502,6 @@ Blue value of the envelope
 == 
 
 Border
-== 
-
-Browser
 == 
 
 CCW
@@ -643,9 +634,6 @@ File: %s
 == 
 
 Filename:
-== 
-
-Filter gametype strict
 == 
 
 Folder
@@ -980,6 +968,8 @@ no limit
 
 ##### old translations #####
 
-Loading
-== Caricamento
+##### DDRace #####
+
+Loading DDRace Client
+== Caricamento DDRace
 
