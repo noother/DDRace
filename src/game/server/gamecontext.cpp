@@ -1268,7 +1268,7 @@ void CGameContext::ConAddVote(IConsole::IResult *pResult, void *pUserData, int C
 	const char *pString = pResult->GetString(0);
 
 	// check for valid option
-	if(g_Config.m_SvHeaderVote && !pSelf->Console()->LineIsValid(pResult->GetString(0)) && pResult->GetString(0)[0] != '#')
+	if(!g_Config.m_SvHeaderVote && !pSelf->Console()->LineIsValid(pResult->GetString(0)) && pResult->GetString(0)[0] != '#')
 	{
 		char aBuf[256];
 		str_format(aBuf, sizeof(aBuf), "skipped invalid option '%s'", pResult->GetString(0));
