@@ -439,8 +439,8 @@ Load a new image to use in the map
 Load map
 == Karte laden
 
-Loading DDRace Client
-== Lade DDRace
+Loading
+== Laden
 
 MOTD
 == Nachricht des Tages
@@ -960,18 +960,6 @@ no limit
 %i seconds left
 == 
 
-Add Quads Layer
-== 
-
-Add Tile Layer
-== 
-
-Browser
-== 
-
-Filter gametype strict
-== 
-
 Name plates size
 == 
 
@@ -980,6 +968,8 @@ Unable to delete the demo
 
 ##### old translations #####
 
-Loading
-== Laden
+##### DDRace #####
+
+Loading DDRace Client
+== Lade DDRace
 
