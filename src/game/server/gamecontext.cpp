@@ -846,6 +846,11 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 			{
 				if(str_comp_nocase(pMsg->m_Value, pOption->m_aCommand) == 0)
 				{
+					if(!Console()->LineIsValid(pOption->m_aCommand)) {
+						SendChatTarget(ClientId, "Invalid option/vote comment");
+						return;
+					}
+
 					//str_format(aChatmsg, sizeof(aChatmsg), "Vote called to change server option '%s'", pOption->m_aCommand);
 					if(m_apPlayers[ClientId]->m_Authed <= 0 && strncmp(pOption->m_aCommand, "sv_map ", 7) == 0 && time_get() < last_mapvote + (time_freq() * g_Config.m_SvVoteMapTimeDelay))
 						{
@@ -1269,14 +1274,14 @@ void CGameContext::ConAddVote(IConsole::IResult *pResult, void *pUserData, int C
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	const char *pString = pResult->GetString(0);
 
-	// check for valid option
-	if(!pSelf->Console()->LineIsValid(pResult->GetString(0)) && pResult->GetString(0)[0] != '#')
+	// check for valid option // removed this because of wanted 'comments' in votelist
+	/*if(!pSelf->Console()->LineIsValid(pResult->GetString(0)) && pResult->GetString(0)[0] != '#')
 	{
 		char aBuf[256];
 		str_format(aBuf, sizeof(aBuf), "skipped invalid option '%s'", pResult->GetString(0));
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 		return;
-	}
+	}*/
 
 	CGameContext::CVoteOption *pOption = pSelf->m_pVoteOptionFirst;
 	while(pOption)
