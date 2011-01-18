@@ -846,7 +846,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 			{
 				if(str_comp_nocase(pMsg->m_Value, pOption->m_aCommand) == 0)
 				{
-					//str_format(aChatmsg, sizeof(aChatmsg), "Vote called to change server option '%s'", Server()->ClientName(ClientId), pOption->m_aCommand);
+					//str_format(aChatmsg, sizeof(aChatmsg), "Vote called to change server option '%s'", pOption->m_aCommand);
 					if(m_apPlayers[ClientId]->m_Authed <= 0 && strncmp(pOption->m_aCommand, "sv_map ", 7) == 0 && time_get() < last_mapvote + (time_freq() * g_Config.m_SvVoteMapTimeDelay))
 						{
 							char chatmsg[512] = {0};
@@ -855,7 +855,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 
 							return;
 						}
-					str_format(aChatmsg, sizeof(aChatmsg), "Vote called to change server option '%s'", Server()->ClientName(ClientId), pOption->m_aCommand);
+					str_format(aChatmsg, sizeof(aChatmsg), "Vote called to change server option '%s'", pOption->m_aCommand);
 					str_format(aDesc, sizeof(aDesc), "%s", pOption->m_aCommand);
 					str_format(aCmd, sizeof(aCmd), "%s", pOption->m_aCommand);
 					last_mapvote = time_get();
@@ -875,7 +875,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 				}
 				else
 				{
-					str_format(aChatmsg, sizeof(aChatmsg), "Vote called to change server option '%s'", Server()->ClientName(ClientId), pMsg->m_Value);
+					str_format(aChatmsg, sizeof(aChatmsg), "Vote called to change server option '%s'", pMsg->m_Value);
 					str_format(aDesc, sizeof(aDesc), "%s", pMsg->m_Value);
 					str_format(aCmd, sizeof(aCmd), "%s", pMsg->m_Value);
 				}
@@ -922,7 +922,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 				SendChatTarget(ClientId, "You can't kick this player");
 				m_apPlayers[ClientId]->m_Last_KickVote = time_get();
 				char aBufKick[128];
-				str_format(aBufKick, sizeof(aBufKick), "Vote called to kick you", Server()->ClientName(ClientId));
+				str_format(aBufKick, sizeof(aBufKick), "Vote called to kick you");
 				SendChatTarget(KickId, aBufKick);
 				return;
 			}
@@ -942,7 +942,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 				}
 			}
 			
-			str_format(aChatmsg, sizeof(aChatmsg), "Vote called to kick '%s' (%s)", Server()->ClientName(ClientId), Server()->ClientName(KickId), pReason);
+			str_format(aChatmsg, sizeof(aChatmsg), "Vote called to kick '%s' (%s)", Server()->ClientName(KickId), pReason);
 			str_format(aDesc, sizeof(aDesc), "Kick '%s'", Server()->ClientName(KickId));
 			if(!g_Config.m_SvVoteKickBantime)
 				str_format(aCmd, sizeof(aCmd), "kick %d Kicked by vote", KickId);
