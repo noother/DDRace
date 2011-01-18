@@ -850,7 +850,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 					if(m_apPlayers[ClientId]->m_Authed <= 0 && strncmp(pOption->m_aCommand, "sv_map ", 7) == 0 && time_get() < last_mapvote + (time_freq() * g_Config.m_SvVoteMapTimeDelay))
 						{
 							char chatmsg[512] = {0};
-							str_format(chatmsg, sizeof(chatmsg), "There's a %d second delay between map-votes,Please wait %d Second(s)", g_Config.m_SvVoteMapTimeDelay,((last_mapvote+(g_Config.m_SvVoteMapTimeDelay * time_freq()))/time_freq())-(time_get()/time_freq()));
+							str_format(chatmsg, sizeof(chatmsg), "There's a %d second delay between map-votes, please wait %d Second(s)", g_Config.m_SvVoteMapTimeDelay,((last_mapvote+(g_Config.m_SvVoteMapTimeDelay * time_freq()))/time_freq())-(time_get()/time_freq()));
 							SendChatTarget(ClientId, chatmsg);
 
 							return;
@@ -922,7 +922,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 				SendChatTarget(ClientId, "You can't kick this player");
 				m_apPlayers[ClientId]->m_Last_KickVote = time_get();
 				char aBufKick[128];
-				str_format(aBufKick, sizeof(aBufKick), "Vote called to kick you");
+				str_format(aBufKick, sizeof(aBufKick), "'%s' called a vote to kick you", Server()->ClientName(ClientId));
 				SendChatTarget(KickId, aBufKick);
 				return;
 			}
