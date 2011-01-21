@@ -189,7 +189,6 @@ CServer::CServer() : m_DemoRecorder(&m_SnapshotDelta)
 	m_CurrentMapSize = 0;
 	
 	m_MapReload = 0;
-	m_LastMapLoad = 0;
 
 	m_RconClientId = -1;
 
