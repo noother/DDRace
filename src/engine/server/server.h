@@ -122,7 +122,6 @@ public:
 	int m_RunServer;
 	int m_MapReload;
 	int m_RconClientId;
-	int64 m_LastMapLoad;
 
 	char m_aBrowseinfoGametype[16];
 	int m_BrowseinfoProgression;

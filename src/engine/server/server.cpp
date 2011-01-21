@@ -1145,9 +1145,6 @@ int CServer::LoadMap(const char *pMapName)
 		io_read(File, m_pCurrentMapData, m_CurrentMapSize);
 		io_close(File);
 	}
-
-	m_LastMapLoad = time_get();
-
 	return 1;
 }
 
