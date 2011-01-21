@@ -190,6 +190,8 @@ CServer::CServer() : m_DemoRecorder(&m_SnapshotDelta)
 	
 	m_MapReload = 0;
 
+	memset(m_aPrevStates, CClient::STATE_EMPTY, MAX_CLIENTS * sizeof(int));
+
 	m_RconClientId = -1;
 
 	Init();
@@ -591,6 +593,7 @@ int CServer::DelClientCallback(int ClientId, const char *pReason, void *pUser)
 	pThis->m_aClients[ClientId].m_aClan[0] = 0;
 	pThis->m_aClients[ClientId].m_Authed = 0;
 	pThis->m_aClients[ClientId].m_AuthTries = 0;
+	pThis->m_aPrevStates[ClientId] = CClient::STATE_EMPTY;
 	memset(&pThis->m_aClients[ClientId].m_Addr, 0, sizeof(NETADDR));
 	pThis->m_aClients[ClientId].m_Snapshots.PurgeAll();
 	return 0;
@@ -903,22 +906,24 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 			}
 			else
 			{
-				char aHex[] = "0123456789ABCDEF";
-				char aBuf[512];
-
-				for(int b = 0; b < pPacket->m_DataSize && b < 32; b++)
+				if(g_Config.m_Debug)
 				{
-					aBuf[b*3] = aHex[((const unsigned char *)pPacket->m_pData)[b]>>4];
-					aBuf[b*3+1] = aHex[((const unsigned char *)pPacket->m_pData)[b]&0xf];
-					aBuf[b*3+2] = ' ';
-					aBuf[b*3+3] = 0;
-				}
+					char aHex[] = "0123456789ABCDEF";
+					char aBuf[512];
 
-				char aBufMsg[256];
-				str_format(aBufMsg, sizeof(aBufMsg), "strange message ClientId=%d msg=%d data_size=%d", ClientId, Msg, pPacket->m_DataSize);
-				Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "server", aBufMsg);
-				Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "server", aBuf);
-				
+					for(int b = 0; b < pPacket->m_DataSize && b < 32; b++)
+					{
+						aBuf[b*3] = aHex[((const unsigned char *)pPacket->m_pData)[b]>>4];
+						aBuf[b*3+1] = aHex[((const unsigned char *)pPacket->m_pData)[b]&0xf];
+						aBuf[b*3+2] = ' ';
+						aBuf[b*3+3] = 0;
+					}
+
+					char aBufMsg[256];
+					str_format(aBufMsg, sizeof(aBufMsg), "strange message ClientId=%d msg=%d data_size=%d", ClientId, Msg, pPacket->m_DataSize);
+					Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "server", aBufMsg);
+					Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "server", aBuf);
+				}
 			}
 		}
 		else
@@ -1145,6 +1150,11 @@ int CServer::LoadMap(const char *pMapName)
 		io_read(File, m_pCurrentMapData, m_CurrentMapSize);
 		io_close(File);
 	}
+
+	for(int i=0; i<MAX_CLIENTS; i++) {
+		m_aPrevStates[i] = m_aClients[i].m_State;
+	}
+
 	return 1;
 }
 
