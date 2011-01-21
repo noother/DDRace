@@ -109,7 +109,6 @@ public:
 	};
 	
 	CClient m_aClients[MAX_CLIENTS];
-	int m_aPrevStates[MAX_CLIENTS];
 
 	CSnapshotDelta m_SnapshotDelta;
 	CSnapshotBuilder m_SnapshotBuilder;
@@ -123,6 +122,7 @@ public:
 	int m_RunServer;
 	int m_MapReload;
 	int m_RconClientId;
+	int64 m_LastMapLoad;
 
 	char m_aBrowseinfoGametype[16];
 	int m_BrowseinfoProgression;
