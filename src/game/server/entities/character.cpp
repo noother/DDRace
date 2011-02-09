@@ -1079,7 +1079,7 @@ void CCharacter::HandleBroadcast()
 
 	if(Server()->Tick() - m_RefreshTime >= Server()->TickSpeed())
 	{
-		if (m_DDRaceState == DDRACE_STARTED)
+		if (m_DDRaceState == DDRACE_STARTED)	
 		{
 			if(m_CpActive != -1 && m_CpTick > Server()->Tick() && !m_pPlayer->m_IsUsingDDRaceClient)
 			{
@@ -1091,7 +1091,7 @@ void CCharacter::HandleBroadcast()
 					m_LastBroadcast = Server()->Tick();
 				}
 			}
-			else if( g_Config.m_SvBroadcast[0] != 0 && m_BroadCast)
+			else if( g_Config.m_SvBroadcast[0] != 0 && m_BroadCast && (g_Config.m_SvBroadcastTime == -1 || m_Time < g_Config.m_SvBroadcastTime))
 			{
 				str_format(aBroadcast, sizeof(aBroadcast), "%s", g_Config.m_SvBroadcast);
 
@@ -1100,6 +1100,10 @@ void CCharacter::HandleBroadcast()
 					GameServer()->SendBroadcast(aBroadcast, m_pPlayer->GetCID());
 					m_LastBroadcast = Server()->Tick();
 				}
+			}
+			else {
+				GameServer()->SendBroadcast("", m_pPlayer->GetCID());
+				m_LastBroadcast = Server()->Tick();
 			}
 		}
 		else
