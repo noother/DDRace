@@ -89,7 +89,16 @@ void dbg_msg(const char *sys, const char *fmt, ...)
 	char *msg;
 	int i, len;
 
-	str_format(str, sizeof(str), "[%08x][%s]: ", (int)time(0), sys);
+	time_t rawtime;
+	struct tm * timeinfo;
+	char timestr [80];
+
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+
+	strftime (timestr,sizeof(timestr),"%y-%m-%d %H:%M:%S",timeinfo);
+	str_format(str, sizeof(str), "[%s][%s]: ", timestr, sys);
+	
 	len = strlen(str);
 	msg = (char *)str + len;
 
@@ -1340,12 +1349,14 @@ void gui_messagebox(const char *title, const char *message)
 	RunStandardAlert(theItem, NULL, &itemIndex);
 #elif defined(CONF_FAMILY_UNIX)
 	static char cmd[1024];
+	int err;
 	/* use xmessage which is available on nearly every X11 system */
 	snprintf(cmd, sizeof(cmd), "xmessage -center -title '%s' '%s'",
 		title,
 		message);
 
-	(void)system(cmd);
+	err = system(cmd);
+	dbg_msg("gui/msgbox", "result = %i", err);
 #elif defined(CONF_FAMILY_WINDOWS)
 	MessageBox(NULL,
 		message,
