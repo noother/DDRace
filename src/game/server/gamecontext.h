@@ -230,6 +230,9 @@ private:
 	static void ConKill(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConTogglePause(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConTop5(IConsole::IResult *pResult, void *pUserData, int ClientID);
+	#if defined(CONF_SQL)
+	static void ConTimes(IConsole::IResult *pResult, void *pUserData, int ClientID);
+	#endif
 	static void ConRank(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConBroadTime(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConJoinTeam(IConsole::IResult *pResult, void *pUserData, int ClientID);
@@ -244,6 +247,7 @@ private:
 	static void ConYes(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConNo(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConInvite(IConsole::IResult *pResult, void *pUserData, int ClientID);
+	static void ConToggleStrict(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConMute(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConMuteID(IConsole::IResult *pResult, void *pUserData, int ClientID);
 	static void ConMuteIP(IConsole::IResult *pResult, void *pUserData, int ClientID);
