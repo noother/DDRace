@@ -206,7 +206,7 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("restart", "?i", CFGFLAG_SERVER, ConServerDummy, 0, "Restart in x seconds", 0);
 	Console()->Register("broadcast", "r", CFGFLAG_SERVER, ConServerDummy, 0, "Broadcast message", 0);
 	Console()->Register("say", "r", CFGFLAG_SERVER, ConServerDummy, 0, "Say in chat", 0);
-	Console()->Register("set_team", "ii", CFGFLAG_SERVER, ConServerDummy, 0, "Set team of player to team", 0);
+	Console()->Register("set_team", "vi", CFGFLAG_SERVER, ConServerDummy, 0, "Set team of player to team", 0);
 	Console()->Register("set_team_all", "i", CFGFLAG_SERVER, 0, 0, "Set team of all players to team", 0);
 	Console()->Register("addvote", "r", CFGFLAG_SERVER, ConServerDummy, 0, "Add a voting option", 0);
 	Console()->Register("clear_votes", "", CFGFLAG_SERVER, ConServerDummy, 0, "Clears the voting options", 0);
@@ -375,7 +375,7 @@ void CGameClient::OnConnected()
 	m_ServerMode = SERVERMODE_PURE;
 	m_LastSendInfo = 0;
 	
-	// send the inital info
+	// send the initial info
 	SendInfo(true);
 }
 
@@ -899,6 +899,11 @@ void CGameClient::OnNewSnapshot()
 		CNetMsg_Cl_IsDDRace Msg;
 		Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
 		m_DDRaceMsgSent = true;
+
+		if(g_Config.m_ClShowOthers)
+			Console()->ExecuteLine("rcon showothers 1", 4, -1);
+		else
+			Console()->ExecuteLine("rcon showothers 0", 4, -1);
 	}
 
 }

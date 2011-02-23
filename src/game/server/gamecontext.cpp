@@ -27,8 +27,6 @@
 #include "score/sql_score.h"
 #endif
 
-struct CMute CGameContext::m_aMutes[MAX_MUTES];
-
 enum
 {
 	RESET,
@@ -51,9 +49,8 @@ void CGameContext::Construct(int Resetting)
 	if(Resetting==NO_RESET)
 	{
 		m_pVoteOptionHeap = new CHeap();
-	m_pScore = 0;
-		for(int z = 0; z < MAX_MUTES; ++z)
-			m_aMutes[z].m_IP[0] = 0;
+		m_pScore = 0;
+		m_NumMutes = 0;
 	}
 }
 
@@ -141,9 +138,10 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 		pEvent->m_X = (int)Pos.x;
 		pEvent->m_Y = (int)Pos.y;
 	}
-
+/*
 	if (!NoDamage)
 	{
+	*/
 		// deal damage
 		CCharacter *apEnts[MAX_CLIENTS];
 		float Radius = 135.0f;
@@ -167,7 +165,7 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 					if(!g_Config.m_SvHit||NoDamage) break;
 				}
 		}
-	}
+	//}
 }
 
 /*
@@ -241,15 +239,48 @@ void CGameContext::SendChatTarget(int To, const char *pText)
 }
 
 
+int CGameContext::ProcessSpamProtection(int ClientID)
+{
+	if(g_Config.m_SvSpamprotection && m_apPlayers[ClientID]->m_Last_Chat
+		&& m_apPlayers[ClientID]->m_Last_Chat + Server()->TickSpeed() + g_Config.m_SvChatDelay > Server()->Tick())
+		return 1;
+	else
+		m_apPlayers[ClientID]->m_Last_Chat = Server()->Tick();
+
+	NETADDR Addr;
+	Server()->GetClientAddr(ClientID, &Addr);
+	int Muted = 0;
+
+	for(int i = 0; i < m_NumMutes && !Muted; i++)
+	{
+		if(!net_addr_comp(&Addr, &m_aMutes[i].m_Addr))
+			Muted = (m_aMutes[i].m_Expire - Server()->Tick()) / Server()->TickSpeed();
+	}
+	
+	if (Muted > 0)
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof aBuf, "You are not permitted to talk for the next %d seconds.", Muted);
+		SendChatTarget(ClientID, aBuf);
+		return 1;
+	}
+
+	if ((m_apPlayers[ClientID]->m_ChatScore += g_Config.m_SvChatPenalty) > g_Config.m_SvChatThreshold)
+	{
+		Mute(&Addr, g_Config.m_SvSpamMuteDuration, Server()->ClientName(ClientID));
+		m_apPlayers[ClientID]->m_ChatScore = 0;
+		return 1;
+	}
+
+	return 0;
+}
+
 void CGameContext::SendChat(int ChatterClientID, int Team, const char *pText, int SpamProtectionClientID)
 {
 	if(SpamProtectionClientID >= 0 && SpamProtectionClientID < MAX_CLIENTS)
 	{
-		if(g_Config.m_SvSpamprotection && m_apPlayers[SpamProtectionClientID]->m_Last_Chat
-			&& m_apPlayers[SpamProtectionClientID]->m_Last_Chat + Server()->TickSpeed() + g_Config.m_SvChatDelay > Server()->Tick())
+		if(ProcessSpamProtection(SpamProtectionClientID))
 			return;
-		else
-			m_apPlayers[SpamProtectionClientID]->m_Last_Chat = Server()->Tick();
 	}
 
 	char aBuf[256], aText[256];
@@ -544,33 +575,41 @@ void CGameContext::OnTick()
 		}
 	}
 	
-
-if(Server()->Tick() % (g_Config.m_SvAnnouncementInterval * Server()->TickSpeed() * 60) == 0)
-{
-	char *Line = ((CServer *) Server())->GetAnnouncementLine(g_Config.m_SvAnnouncementFileName);
-	if(Line)
-		SendChat(-1, CGameContext::CHAT_ALL, Line);
-}
-
-if(Collision()->m_NumSwitchers > 0)
-	for (int i = 0; i < Collision()->m_NumSwitchers+1; ++i)
+	for(int i = 0; i < m_NumMutes; i++)
 	{
-		for (int j = 0; j < 16; ++j)
+		if(m_aMutes[i].m_Expire <= Server()->Tick())
 		{
-			if(Collision()->m_pSwitchers[i].m_EndTick[j] <= Server()->Tick() && Collision()->m_pSwitchers[i].m_Type[j] == TILE_SWITCHTIMEDOPEN)
-			{
-				Collision()->m_pSwitchers[i].m_Status[j] = false;
-				Collision()->m_pSwitchers[i].m_EndTick[j] = 0;
-				Collision()->m_pSwitchers[i].m_Type[j] = TILE_SWITCHCLOSE;
-			}
-			else if(Collision()->m_pSwitchers[i].m_EndTick[j] <= Server()->Tick() && Collision()->m_pSwitchers[i].m_Type[j] == TILE_SWITCHTIMEDCLOSE)
-			{
-				Collision()->m_pSwitchers[i].m_Status[j] = true;
-				Collision()->m_pSwitchers[i].m_EndTick[j] = 0;
-				Collision()->m_pSwitchers[i].m_Type[j] = TILE_SWITCHOPEN;
-			}
+			m_NumMutes--;
+			m_aMutes[i] = m_aMutes[m_NumMutes];
 		}
 	}
+
+	if(Server()->Tick() % (g_Config.m_SvAnnouncementInterval * Server()->TickSpeed() * 60) == 0)
+	{
+		char *Line = ((CServer *) Server())->GetAnnouncementLine(g_Config.m_SvAnnouncementFileName);
+		if(Line)
+			SendChat(-1, CGameContext::CHAT_ALL, Line);
+	}
+
+	if(Collision()->m_NumSwitchers > 0)
+		for (int i = 0; i < Collision()->m_NumSwitchers+1; ++i)
+		{
+			for (int j = 0; j < 16; ++j)
+			{
+				if(Collision()->m_pSwitchers[i].m_EndTick[j] <= Server()->Tick() && Collision()->m_pSwitchers[i].m_Type[j] == TILE_SWITCHTIMEDOPEN)
+				{
+					Collision()->m_pSwitchers[i].m_Status[j] = false;
+					Collision()->m_pSwitchers[i].m_EndTick[j] = 0;
+					Collision()->m_pSwitchers[i].m_Type[j] = TILE_SWITCHCLOSE;
+				}
+				else if(Collision()->m_pSwitchers[i].m_EndTick[j] <= Server()->Tick() && Collision()->m_pSwitchers[i].m_Type[j] == TILE_SWITCHTIMEDCLOSE)
+				{
+					Collision()->m_pSwitchers[i].m_Status[j] = true;
+					Collision()->m_pSwitchers[i].m_EndTick[j] = 0;
+					Collision()->m_pSwitchers[i].m_Type[j] = TILE_SWITCHOPEN;
+				}
+			}
+		}
 
 #ifdef CONF_DEBUG
 	if(g_Config.m_DbgDummies)
@@ -699,45 +738,15 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientID)
 		p->m_Last_Chat = Server()->Tick();
 */
 		int GameTeam = ((CGameControllerDDRace*)m_pController)->m_Teams.m_Core.Team(p->GetCID());
-		if(Team) {
+		if(Team)
 			Team = ((p->GetTeam() == -1) ? CHAT_SPEC : GameTeam);
-		} else {
+		else
 			Team = CHAT_ALL;
-		}
 
 		if(str_length(pMsg->m_pMessage)>370)
 		{
 			SendChatTarget(ClientID, "Your Message is too long");
 			return;
-		}
-
-		char aIP[16];
-		int MuteTicks = 0;
-
-		Server()->GetClientIP(ClientID, aIP, sizeof aIP);
-
-		for(int z = 0; z < MAX_MUTES && MuteTicks <= 0; ++z) //find a mute, remove it, if expired.
-			if (m_aMutes[z].m_IP[0] && str_comp(aIP, m_aMutes[z].m_IP) == 0 && (MuteTicks = m_aMutes[z].m_Expire - Server()->Tick()) <= 0)
-					m_aMutes[z].m_IP[0] = 0;
-
-		if(pMsg->m_pMessage[0]!='/')
-		{
-			if (MuteTicks > 0)
-			{
-				char aBuf[128];
-				str_format(aBuf, sizeof aBuf, "You are not permitted to talk for the next %d seconds.", MuteTicks / Server()->TickSpeed());
-				SendChatTarget(ClientID, aBuf);
-				return;
-			}
-
-			if ((p->m_ChatScore += g_Config.m_SvChatPenalty) > g_Config.m_SvChatThreshold)
-			{
-				char aIP[16];
-				Server()->GetClientIP(ClientID, aIP, sizeof aIP);
-				Mute(aIP, g_Config.m_SvSpamMuteDuration, Server()->ClientName(ClientID));
-				p->m_ChatScore = 0;
-				return;
-			}
 		}
 
 		// check for invalid chars
@@ -794,7 +803,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientID)
 		if(str_comp_nocase(pMsg->m_Type, "option") == 0)
 		{
 			CVoteOption *pOption = m_pVoteOptionFirst;
-			static int64 last_mapvote = 0; //floff
+			static int64 LastMapVote = 0;
 			while(pOption)
 			{
 				if(str_comp_nocase(pMsg->m_Value, pOption->m_aCommand) == 0)
@@ -804,10 +813,10 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientID)
 						SendChatTarget(ClientID, "Invalid option");
 						return;
 					}
-					if(m_apPlayers[ClientID]->m_Authed <= 0 && strncmp(pOption->m_aCommand, "sv_map ", 7) == 0 && time_get() < last_mapvote + (time_freq() * g_Config.m_SvVoteMapTimeDelay))
+					if(m_apPlayers[ClientID]->m_Authed <= 0 && strncmp(pOption->m_aCommand, "sv_map ", 7) == 0 && time_get() < LastMapVote + (time_freq() * g_Config.m_SvVoteMapTimeDelay))
 						{
 							char chatmsg[512] = {0};
-							str_format(chatmsg, sizeof(chatmsg), "There's a %d second delay between map-votes,Please wait %d Second(s)", g_Config.m_SvVoteMapTimeDelay,((last_mapvote+(g_Config.m_SvVoteMapTimeDelay * time_freq()))/time_freq())-(time_get()/time_freq()));
+							str_format(chatmsg, sizeof(chatmsg), "There's a %d second delay between map-votes,Please wait %d Second(s)", g_Config.m_SvVoteMapTimeDelay,((LastMapVote+(g_Config.m_SvVoteMapTimeDelay * time_freq()))/time_freq())-(time_get()/time_freq()));
 							SendChatTarget(ClientID, chatmsg);
 
 							return;
@@ -815,7 +824,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientID)
 					str_format(aChatmsg, sizeof(aChatmsg), "Vote called to change server option '%s'", pOption->m_aCommand);
 					str_format(aDesc, sizeof(aDesc), "%s", pOption->m_aCommand);
 					str_format(aCmd, sizeof(aCmd), "%s", pOption->m_aCommand);
-					last_mapvote = time_get();
+					LastMapVote = time_get();
 					break;
 				}
 
@@ -838,7 +847,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientID)
 				}
 			}
 
-			last_mapvote = time_get();
+			LastMapVote = time_get();
 			m_VoteKick = false;
 		}
 		else if(str_comp_nocase(pMsg->m_Type, "kick") == 0)
@@ -871,10 +880,10 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientID)
 			}
 			if(KickId == ClientID)
 			{
-				SendChatTarget(ClientID, "You cant kick yourself");
+				SendChatTarget(ClientID, "You can\'t kick yourself");
 				return;
 			}
-			if(ComparePlayers(m_apPlayers[KickId], p))
+			if(m_apPlayers[KickId]->m_Authed > 0 && m_apPlayers[KickId]->m_Authed >= p->m_Authed)
 			{
 				SendChatTarget(ClientID, "You can't kick this player");
 				m_apPlayers[ClientID]->m_Last_KickVote = time_get();
@@ -1280,15 +1289,15 @@ void CGameContext::ConClearVotes(IConsole::IResult *pResult, void *pUserData, in
 void CGameContext::ConVote(IConsole::IResult *pResult, void *pUserData, int ClientID)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	bool Private = false;
+	bool Private = true;
 	if(str_comp_nocase(pResult->GetString(0), "yes") == 0)
 		pSelf->m_VoteEnforce = CGameContext::VOTE_ENFORCE_YES_ADMIN;
 	else if(str_comp_nocase(pResult->GetString(0), "no") == 0)
 		pSelf->m_VoteEnforce = CGameContext::VOTE_ENFORCE_NO_ADMIN;
 	else
 		return;
-	if(str_comp_nocase(pResult->GetString(1), "yes") == 0)
-		Private = true;
+	if(str_comp_nocase(pResult->GetString(1), "no") == 0)
+		Private = false;
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "forcing vote %s", pResult->GetString(0));
 	pSelf->Console()->PrintResponse(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
@@ -1323,12 +1332,12 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("restart", "?i", CFGFLAG_SERVER|CFGFLAG_STORE, ConRestart, this, "", 3);
 	Console()->Register("broadcast", "r", CFGFLAG_SERVER, ConBroadcast, this, "", 2);
 	Console()->Register("say", "r", CFGFLAG_SERVER, ConSay, this, "", 3);
-	Console()->Register("set_team", "ii", CFGFLAG_SERVER, ConSetTeam, this, "", 2);
+	Console()->Register("set_team", "vi", CFGFLAG_SERVER, ConSetTeam, this, "", 2);
 	Console()->Register("set_team_all", "i", CFGFLAG_SERVER, ConSetTeamAll, this, "", 2);
 
 	Console()->Register("addvote", "r", CFGFLAG_SERVER, ConAddVote, this, "", 4);
 	Console()->Register("clear_votes", "", CFGFLAG_SERVER, ConClearVotes, this, "", 3);
-	Console()->Register("vote", "s ?s", CFGFLAG_SERVER, ConVote, this, "Force the vote to yes or no?, Make the forcing of the vote private?", 3);
+	Console()->Register("vote", "s?s", CFGFLAG_SERVER, ConVote, this, "Force the vote to yes or no?, Make the forcing of the vote private?", 3);
 
 #define CONSOLE_COMMAND(name, params, flags, callback, userdata, help, level) m_pConsole->Register(name, params, flags, callback, userdata, help, level);
 #include "game/ddracecommands.h"
@@ -1581,14 +1590,6 @@ void CGameContext::SendChatResponse(const char *pLine, void *pUser)
 	ReentryGuard--;
 }
 
-bool ComparePlayers(CPlayer *pl1, CPlayer *pl2)
-{
-	if(((pl1->m_Authed >= 0) ? pl1->m_Authed : 0) > ((pl2->m_Authed >= 0) ? pl2->m_Authed : 0))
-		return true;
-	else
-		return false;
-}
-
 bool CGameContext::PlayerCollision()
 {
 	float Temp;
@@ -1605,15 +1606,17 @@ bool CGameContext::PlayerHooking()
 
 void CGameContext::OnSetAuthed(int ClientID, int Level)
 {
+	CServer* pServ = (CServer*)Server();
 	if(m_apPlayers[ClientID])
 	{
 		m_apPlayers[ClientID]->m_Authed = Level;
-		char buf[11];
-		str_format(buf, sizeof(buf), "ban %d %d", ClientID, g_Config.m_SvVoteKickBantime);
-		if( !strcmp(m_aVoteCommand,buf))
+		char aBuf[512], aIP[20];
+		pServ->GetClientIP(ClientID, aIP, sizeof(aIP));
+		str_format(aBuf, sizeof(aBuf), "ban %s %d Banned by vote", aIP, g_Config.m_SvVoteKickBantime);
+		if(!str_comp_nocase(m_aVoteCommand,aBuf) && Level > 0)
 		{
 			m_VoteEnforce = CGameContext::VOTE_ENFORCE_NO;
-			dbg_msg("hooks","Aborting vote");
+			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "CGameContext", "Aborted vote by admin login.");
 		}
 	}
 }
